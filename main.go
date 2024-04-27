@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// export GO111MODULE=on;
 type User struct {
 	gorm.Model
 	Name     string
@@ -28,10 +29,9 @@ type Secret struct {
 
 var db *gorm.DB
 
-func main() {
+func getDynamoDBConnection() {
 	secretName := "dev/clientID"
 	region := "us-east-1"
-
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	if err != nil {
 		panic("unable to load SDK config, " + err.Error())
@@ -48,14 +48,18 @@ func main() {
 	if err != nil {
 		panic("failed to retrieve secret from AWS Secrets Manager")
 	}
-
 	var secret Secret
 	json.Unmarshal([]byte(*result.SecretString), &secret)
-
 	db, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@/dbname?charset=utf8&parseTime=True&loc=Local", secret.Username, secret.Password))
 	if err != nil {
 		panic("failed to connect database")
 	}
+}
+
+func main() {
+
+	getDynamoDBConnection()
+
 	defer db.Close()
 	db.AutoMigrate(&User{})
 
